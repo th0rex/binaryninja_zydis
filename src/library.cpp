@@ -47,7 +47,7 @@ static bool is_branch(const ZydisDecodedInstruction& insn) {
     ZYDIS_CATEGORY_UNCOND_BR;
 }
 
-static void add_branch(BNBranchType type, const ZydisDecodedInstruction& insn,
+static void add_branch(BNBranchType type, BNBranchType fall_back, const ZydisDecodedInstruction& insn,
                        InstructionInfo& result) {
   const auto& op = insn.operands[0];
 
@@ -58,7 +58,9 @@ static void add_branch(BNBranchType type, const ZydisDecodedInstruction& insn,
                      value);
   }
   else if (op.type == ZYDIS_OPERAND_TYPE_REGISTER) {
-    result.AddBranch(BNBranchType::IndirectBranch);
+    result.AddBranch(fall_back);
+  } else {
+    assert(0);
   }
 }
 
@@ -98,7 +100,7 @@ static void add_cond_branch(const ZydisDecodedInstruction& insn,
   case ZYDIS_MNEMONIC_JNS:
   case ZYDIS_MNEMONIC_JNZ:
   case ZYDIS_MNEMONIC_LOOPNE:
-    add_branch(BNBranchType::TrueBranch, insn, result);
+    add_branch(BNBranchType::TrueBranch, BNBranchType::IndirectBranch, insn, result);
     add_continue_branch(BNBranchType::FalseBranch, insn, result);
     break;
   default:
@@ -112,7 +114,7 @@ static void add_branches(const ZydisDecodedInstruction& insn,
   if (c == ZYDIS_CATEGORY_CALL) {
     assert(insn.operandCount > 0);
 
-    add_branch(BNBranchType::CallDestination, insn, result);
+    add_branch(BNBranchType::CallDestination, BNBranchType::CallDestination, insn, result);
   }
   else if (c == ZYDIS_CATEGORY_COND_BR) {
     assert(insn.operandCount > 0);
@@ -128,7 +130,7 @@ static void add_branches(const ZydisDecodedInstruction& insn,
   else if (c == ZYDIS_CATEGORY_UNCOND_BR) {
     assert(insn.operandCount > 0);
 
-    add_branch(BNBranchType::UnconditionalBranch, insn, result);
+    add_branch(BNBranchType::UnconditionalBranch, BNBranchType::IndirectBranch, insn, result);
   }
   else {
     assert(false &&
@@ -185,7 +187,6 @@ class zydis_architecture : public Architecture {
   return ZYDIS_STATUS_SUCCESS;
 
 #define TRANSLATE(n, t, ...) TRANSLATE_VALUE(n, t, 0, __VA_ARGS__)
-
 
   static ZydisStatus print_prefixes(const ZydisFormatter* f,
                                     char** buffer,
@@ -374,16 +375,24 @@ class zydis_architecture : public Architecture {
     TRANSLATE(print_decorator, TextToken, f, buffer, buffer_len, insn, operand, type, user_data);
   }
 
+  // BUG: This might get reset in the actual buffer, but we have no way to tell.
   static ZydisStatus print_operand_seperator(const ZydisFormatter* f,
                                              char** buffer,
                                              ZydisUSize buffer_len,
                                              ZydisU8 index,
                                              void* user_data) {
+    auto* d2 = (hook_data*)user_data;
+
+    if(d2->tokens.size() >= 2 && d2->tokens[d2->tokens.size() - 2].type == OperandSeparatorToken) {
+      return ZYDIS_STATUS_SUCCESS;
+    }
+
     TRANSLATE(print_operand_seperator, OperandSeparatorToken, f, buffer,
       buffer_len, index, user_data);
   }
 
 #undef TRANSLATE
+#undef TRANSLATE_VALUE
 
   bool set_formatter_hooks() {
     const void* c = nullptr;
@@ -436,7 +445,7 @@ public:
     if (ZydisFormatterSetProperty(&_formatter,
                                   ZYDIS_FORMATTER_PROP_HEX_UPPERCASE, 0) !=
       ZYDIS_STATUS_SUCCESS) {
-      throw std::runtime_error("Could not set formatter properyt");
+      throw std::runtime_error("Could not set formatter property");
     }
 
     if (ZydisFormatterSetProperty(&_formatter,
@@ -512,7 +521,7 @@ extern "C" {
                               zydis_arch);
                           });
 
-    auto b = true;
+    auto b = false;
     if (b) {
       [zydis_arch](BinaryView* view) {
         BinaryViewType::RegisterArchitecture(
