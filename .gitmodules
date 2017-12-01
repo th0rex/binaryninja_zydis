@@ -1,6 +1,7 @@
 [submodule "third_party/binaryninja-api"]
 	path = third_party/binaryninja-api
 	url = git@github.com:Vector35/binaryninja-api.git
+	branch = dev
 [submodule "third_party/zydis"]
 	path = third_party/zydis
 	url = git@github.com:th0rex/zydis-1.git
