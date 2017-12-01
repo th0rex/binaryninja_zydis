@@ -3,5 +3,5 @@
 	url = git@github.com:Vector35/binaryninja-api.git
 [submodule "third_party/zydis"]
 	path = third_party/zydis
-	url = git@github.com:zyantific/zydis.git
+	url = git@github.com:th0rex/zydis-1.git
 	branch = develop
