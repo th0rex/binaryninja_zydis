@@ -19,3 +19,7 @@ target_include_directories(binaryninja_zydis PUBLIC include/)
 if(WIN32)
     target_link_libraries(binaryninja_zydis ${BINARYNINJA_CORE_PATH})
 endif()
+
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    target_compile_options(binaryninja_zydis PRIVATE -Wno-c++17-extensions)
+endif()
