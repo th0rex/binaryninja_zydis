@@ -218,16 +218,13 @@ class zydis_architecture : public Architecture {
       operand, user_data);
   }
 
-  // TODO Check all token types
-
   static ZydisStatus format_operand_mem(const ZydisFormatter* f,
                                         char** buffer,
                                         ZydisUSize buffer_len,
                                         const ZydisDecodedInstruction* insn,
                                         const ZydisDecodedOperand* operand,
                                         void* user_data) {
-    //TRANSLATE(format_operand_mem, BeginMemoryOperandToken, f, buffer, buffer_len, insn, operand, user_data);
-    hook_data* data = (hook_data*)user_data;
+    hook_data* data = static_cast<hook_data*>(user_data);
 
     data->tokens.push_back(InstructionTextToken{
       BeginMemoryOperandToken, "["
@@ -263,7 +260,7 @@ class zydis_architecture : public Architecture {
         }
         if (operand->mem.base != ZYDIS_REGISTER_NONE) {
           data->tokens.push_back(InstructionTextToken{
-            InstructionToken, "+"
+            TextToken, " + "
           });
         }
         data->tokens.push_back(InstructionTextToken{
@@ -275,7 +272,7 @@ class zydis_architecture : public Architecture {
           };
           snprintf(b, 32, "%d", operand->mem.scale);
           data->tokens.push_back(InstructionTextToken{
-            InstructionToken, "*"
+            TextToken, " * "
           });
           data->tokens.push_back(InstructionTextToken{
             IntegerToken, b, operand->mem.scale
@@ -309,7 +306,7 @@ class zydis_architecture : public Architecture {
                                         const ZydisDecodedInstruction* insn,
                                         const ZydisDecodedOperand* operand,
                                         void* user_data) {
-    hook_data* data = (hook_data*)user_data;
+    hook_data* data = static_cast<hook_data*>(user_data);
     CHECK_RESULT2(data->arch._orig_format_operand_imm(f, buffer, buffer_len,
       insn, operand, user_data));
 
@@ -342,8 +339,26 @@ class zydis_architecture : public Architecture {
                                         const ZydisDecodedInstruction* insn,
                                         const ZydisDecodedOperand* operand,
                                         void* user_data) {
-    TRANSLATE(print_displacement, IntegerToken, f, buffer, buffer_len, insn,
-      operand, user_data);
+    auto* data = static_cast<hook_data*>(user_data);
+    auto* before = *buffer;
+    CHECK_RESULT2(data->arch._orig_print_displacement(f, buffer, buffer_len,
+      insn, operand, user_data));
+    auto* after = *buffer;
+
+    auto start = 0;
+    if (before[0] == '+') {
+      data->tokens.push_back(InstructionTextToken{
+        TextToken, " + "
+      });
+      ++start;
+    }
+    data->tokens.push_back(InstructionTextToken{
+      IntegerToken, std::string{
+        before + start, after
+      }
+    });
+
+    return ZYDIS_STATUS_SUCCESS;
   }
 
   static ZydisStatus print_immediate(const ZydisFormatter* f,
@@ -410,7 +425,7 @@ class zydis_architecture : public Architecture {
                                              ZydisUSize buffer_len,
                                              ZydisU8 index,
                                              void* user_data) {
-    auto* d2 = (hook_data*)user_data;
+    auto* d2 = static_cast<hook_data*>(user_data);
 
     if (d2->tokens.size() >= 2 && d2->tokens[d2->tokens.size() - 2].type ==
       OperandSeparatorToken) {
