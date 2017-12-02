@@ -105,7 +105,7 @@ auto match(Cases&&... cases) {
   const auto a = matcher(5);
   assert(a == 5);
   const auto b = matcher(3);
-  assert(b == 9;
+  assert(b == 9);
   matcher(2); // throws
 }*/
 
