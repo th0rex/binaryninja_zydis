@@ -428,7 +428,7 @@ class zydis_architecture : public Architecture {
     auto* d2 = static_cast<hook_data*>(user_data);
 
     if (d2->tokens.size() >= 2 && d2->tokens[d2->tokens.size() - 2].type ==
-      OperandSeparatorToken) {
+      OperandSeparatorToken && d2->tokens[d2->tokens.size() - 2].text == ", ") {
       return ZYDIS_STATUS_SUCCESS;
     }
 
