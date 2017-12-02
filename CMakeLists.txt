@@ -10,10 +10,11 @@ endif()
 
 add_subdirectory(third_party)
 
-set(SOURCE_FILES src/library.cpp)
+set(SOURCE_FILES include/binaryninja_zydis/il.hpp src/library.cpp)
 add_library(binaryninja_zydis SHARED ${SOURCE_FILES})
 target_link_libraries(binaryninja_zydis binaryninjaapi Zydis)
 target_include_directories(binaryninja_zydis PRIVATE third_party/binaryninja-api)
+target_include_directories(binaryninja_zydis PUBLIC include/)
 
 if(WIN32)
     target_link_libraries(binaryninja_zydis ${BINARYNINJA_CORE_PATH})
