@@ -4,8 +4,8 @@
 
 #include <array>
 
-#include "binaryninjaapi.h"
-#include "Zydis/Zydis.h"
+#include <binaryninjaapi.h>
+#include <Zydis/Zydis.h>
 
 using namespace BinaryNinja;
 
