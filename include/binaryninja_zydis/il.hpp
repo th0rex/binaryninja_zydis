@@ -15,34 +15,31 @@ struct false_ {
 };
 
 namespace detail {
-  void no_match() {
-    throw std::runtime_error("No case matched the input value");
-  }
+void no_match() { throw std::runtime_error("No case matched the input value"); }
 
-  template <unsigned, typename, typename, typename>
-  struct match_impl;
+template <unsigned, typename, typename, typename>
+struct match_impl;
 
-  template <unsigned I, typename U, typename... Cx, typename... Ax>
-  struct match_impl<I, U, std::tuple<Cx...>, std::tuple<Ax...>> {
-    static auto call(U&& u, std::tuple<Cx...>& t, Ax&&... ax) {
-      auto& c = std::get<I>(t);
-      if (c.check(u)) {
-        return c.call(std::forward<U>(u), std::forward<Ax>(ax)...);
-      }
-
-      if constexpr (sizeof...(Cx) == I + 1) {
-        no_match();
-      }
-      else {
-        return match_impl<I + 1,
-                          U,
-                          std::tuple<Cx...>,
-                          std::tuple<Ax...>>
-          ::call(std::forward<U>(u), t, std::forward<Ax>(ax)...);
-      }
+template <unsigned I, typename U, typename... Cx, typename... Ax>
+struct match_impl<I, U, std::tuple<Cx...>, std::tuple<Ax...>> {
+  static auto call(U&& u, std::tuple<Cx...>& t, Ax&&... ax) {
+    auto& c = std::get<I>(t);
+    if (c.check(u)) {
+      return c.call(std::forward<U>(u), std::forward<Ax>(ax)...);
     }
-  };
-}
+
+    if constexpr (sizeof...(Cx) == I + 1) {
+      no_match();
+      return decltype(
+          match_impl<I, U, std::tuple<Cx...>, std::tuple<Ax...>>::call(
+              std::forward<U>(u), t, std::forward<Ax>(ax)...)){};
+    } else {
+      return match_impl<I + 1, U, std::tuple<Cx...>, std::tuple<Ax...>>::call(
+          std::forward<U>(u), t, std::forward<Ax>(ax)...);
+    }
+  }
+};
+}  // namespace detail
 
 template <typename E, typename F>
 struct match_case {
@@ -50,17 +47,8 @@ struct match_case {
   F call;
 };
 
-//template <typename E, typename F>
-//match_case(E, F) -> match_case<E, F>;
-
-// Fuck msvc
 template <typename E, typename F>
-match_case<E, F> make_match_case(E&& e, F&& f) {
-  return match_case<E, F>{
-    std::forward<E>(e),
-    std::forward<F>(f)
-  };
-}
+match_case(E, F) -> match_case<E, F>;
 
 template <typename... Cases>
 auto match(Cases&&... cases) {
@@ -69,16 +57,16 @@ auto match(Cases&&... cases) {
   }
 
   return [cases = std::make_tuple(std::forward<Cases>(cases)...)](
-    auto&& u, auto&&... args) mutable {
-    return detail::match_impl<0,
-                              decltype(u),
-                              std::tuple<Cases...>,
-                              std::tuple<decltype(args)...>>
-      ::call(std::forward<decltype(u)>(u), cases,
-             std::forward<decltype(args)>(args)...);
+      auto&& u, auto&&... args) mutable {
+    return detail::match_impl<
+        0, decltype(u), std::tuple<Cases...>,
+        std::tuple<decltype(args)...>>::call(std::forward<decltype(u)>(u),
+                                             cases,
+                                             std::forward<decltype(args)>(
+                                                 args)...);
   };
 }
-}
+}  // namespace pattern_match
 
 /*void test() {
   using namespace pattern_match;
