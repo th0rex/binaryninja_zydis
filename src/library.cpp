@@ -64,12 +64,6 @@ static void add_branch(BNBranchType type, BNBranchType fall_back, const ZydisDec
   }
 }
 
-static void add_continue_branch(BNBranchType type,
-                                const ZydisDecodedInstruction& insn,
-                                InstructionInfo& result) {
-  result.AddBranch(type, insn.instrPointer);
-}
-
 static void add_cond_branch(const ZydisDecodedInstruction& insn,
                             InstructionInfo& result) {
   switch (insn.mnemonic) {
@@ -101,7 +95,7 @@ static void add_cond_branch(const ZydisDecodedInstruction& insn,
   case ZYDIS_MNEMONIC_JNZ:
   case ZYDIS_MNEMONIC_LOOPNE:
     add_branch(BNBranchType::TrueBranch, BNBranchType::IndirectBranch, insn, result);
-    add_continue_branch(BNBranchType::FalseBranch, insn, result);
+    result.AddBranch(BNBranchType::FalseBranch, insn.instrAddress + insn.length);
     break;
   default:
     assert(0);
@@ -372,6 +366,7 @@ class zydis_architecture : public Architecture {
                                      const ZydisDecodedOperand* operand,
                                      ZydisDecoratorType type,
                                      void* user_data) {
+    // TODO: Highlight stuff in "{}" so we can click on them
     TRANSLATE(print_decorator, TextToken, f, buffer, buffer_len, insn, operand, type, user_data);
   }
 
