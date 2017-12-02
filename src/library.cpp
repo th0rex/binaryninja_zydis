@@ -28,19 +28,19 @@ struct address_traits;
 
 template <>
 struct address_traits<4> {
-  constexpr static const char* arch_name = "Zydis x86";
+  constexpr static const char *arch_name = "Zydis x86";
   constexpr static ZydisAddressWidth address_width = ZYDIS_ADDRESS_WIDTH_32;
   constexpr static ZydisMachineMode machine_mode = ZYDIS_MACHINE_MODE_LEGACY_32;
 };
 
 template <>
 struct address_traits<8> {
-  constexpr static const char* arch_name = "Zydis x64";
+  constexpr static const char *arch_name = "Zydis x64";
   constexpr static ZydisAddressWidth address_width = ZYDIS_ADDRESS_WIDTH_64;
   constexpr static ZydisMachineMode machine_mode = ZYDIS_MACHINE_MODE_LONG_64;
 };
 
-static bool is_branch(const ZydisDecodedInstruction& insn) {
+static bool is_branch(const ZydisDecodedInstruction &insn) {
   const auto c = insn.meta.category;
   return c == ZYDIS_CATEGORY_COND_BR || c == ZYDIS_CATEGORY_CALL ||
          c == ZYDIS_CATEGORY_RET || c == ZYDIS_CATEGORY_SYSCALL ||
@@ -48,9 +48,9 @@ static bool is_branch(const ZydisDecodedInstruction& insn) {
 }
 
 static void add_branch(BNBranchType type, BNBranchType fall_back,
-                       const ZydisDecodedInstruction& insn,
-                       InstructionInfo& result) {
-  const auto& op = insn.operands[0];
+                       const ZydisDecodedInstruction &insn,
+                       InstructionInfo &result) {
+  const auto &op = insn.operands[0];
 
   if (op.type == ZYDIS_OPERAND_TYPE_IMMEDIATE) {
     uint64_t value = 0;
@@ -63,8 +63,8 @@ static void add_branch(BNBranchType type, BNBranchType fall_back,
   }
 }
 
-static void add_cond_branch(const ZydisDecodedInstruction& insn,
-                            InstructionInfo& result) {
+static void add_cond_branch(const ZydisDecodedInstruction &insn,
+                            InstructionInfo &result) {
   switch (insn.mnemonic) {
       // jb, jbe, jcxz, jecxz, jkzd, jl, jle, jo, jp, jrcxz, js, jz, loop, loope
     case ZYDIS_MNEMONIC_JB:
@@ -103,8 +103,8 @@ static void add_cond_branch(const ZydisDecodedInstruction& insn,
   }
 }
 
-static void add_branches(const ZydisDecodedInstruction& insn,
-                         InstructionInfo& result) {
+static void add_branches(const ZydisDecodedInstruction &insn,
+                         InstructionInfo &result) {
   const auto c = insn.meta.category;
   if (c == ZYDIS_CATEGORY_CALL) {
     assert(insn.operandCount > 0);
@@ -156,19 +156,19 @@ class zydis_architecture : public Architecture {
   std::array<char, 512> _buffer;
 
   struct hook_data {
-    hook_data(zydis_architecture<address_size>& arch,
-              std::vector<InstructionTextToken>& instruction_text_tokens)
+    hook_data(zydis_architecture<address_size> &arch,
+              std::vector<InstructionTextToken> &instruction_text_tokens)
         : arch(arch), tokens(instruction_text_tokens) {}
 
-    zydis_architecture<address_size>& arch;
-    std::vector<InstructionTextToken>& tokens;
+    zydis_architecture<address_size> &arch;
+    std::vector<InstructionTextToken> &tokens;
   };
 
 #define TRANSLATE_STRING(n, ...)                    \
-  auto* data = static_cast<hook_data*>(user_data);  \
-  auto* before = *buffer;                           \
+  auto *data = static_cast<hook_data *>(user_data); \
+  auto *before = *buffer;                           \
   CHECK_RESULT2(data->arch._orig_##n(__VA_ARGS__)); \
-  auto* end = *buffer;                              \
+  auto *end = *buffer;                              \
   std::string str{before, end};
 
 #define TRANSLATE_VALUE(n, t, v, ...)                        \
@@ -178,42 +178,42 @@ class zydis_architecture : public Architecture {
 
 #define TRANSLATE(n, t, ...) TRANSLATE_VALUE(n, t, 0, __VA_ARGS__)
 
-  static ZydisStatus print_prefixes(const ZydisFormatter* f, char** buffer,
+  static ZydisStatus print_prefixes(const ZydisFormatter *f, char **buffer,
                                     ZydisUSize buffer_len,
-                                    const ZydisDecodedInstruction* insn,
-                                    void* user_data) {
+                                    const ZydisDecodedInstruction *insn,
+                                    void *user_data) {
     TRANSLATE(print_prefixes, TextToken, f, buffer, buffer_len, insn,
               user_data);
   }
 
-  static ZydisStatus print_mnemonic(const ZydisFormatter* f, char** buffer,
+  static ZydisStatus print_mnemonic(const ZydisFormatter *f, char **buffer,
                                     ZydisUSize buffer_len,
-                                    const ZydisDecodedInstruction* insn,
-                                    void* user_data) {
+                                    const ZydisDecodedInstruction *insn,
+                                    void *user_data) {
     TRANSLATE(print_mnemonic, InstructionToken, f, buffer, buffer_len, insn,
               user_data);
   }
 
-  static ZydisStatus format_operand_reg(const ZydisFormatter* f, char** buffer,
+  static ZydisStatus format_operand_reg(const ZydisFormatter *f, char **buffer,
                                         ZydisUSize buffer_len,
-                                        const ZydisDecodedInstruction* insn,
-                                        const ZydisDecodedOperand* operand,
-                                        void* user_data) {
+                                        const ZydisDecodedInstruction *insn,
+                                        const ZydisDecodedOperand *operand,
+                                        void *user_data) {
     TRANSLATE(format_operand_reg, RegisterToken, f, buffer, buffer_len, insn,
               operand, user_data);
   }
 
-  static ZydisStatus format_operand_mem(const ZydisFormatter* f, char** buffer,
+  static ZydisStatus format_operand_mem(const ZydisFormatter *f, char **buffer,
                                         ZydisUSize buffer_len,
-                                        const ZydisDecodedInstruction* insn,
-                                        const ZydisDecodedOperand* operand,
-                                        void* user_data) {
-    hook_data* data = static_cast<hook_data*>(user_data);
+                                        const ZydisDecodedInstruction *insn,
+                                        const ZydisDecodedOperand *operand,
+                                        void *user_data) {
+    hook_data *data = static_cast<hook_data *>(user_data);
 
     data->tokens.push_back(InstructionTextToken{BeginMemoryOperandToken, "["});
 
     // Adapted from zydis code
-    const char* buf_end = *buffer + buffer_len;
+    const char *buf_end = *buffer + buffer_len;
     if (operand->mem.disp.hasDisplacement &&
         ((operand->mem.base == ZYDIS_REGISTER_NONE) ||
          (operand->mem.base == ZYDIS_REGISTER_EIP) ||
@@ -224,7 +224,7 @@ class zydis_architecture : public Architecture {
           f, buffer, buffer_len, insn, operand, user_data));
     } else {
       if (operand->mem.base != ZYDIS_REGISTER_NONE) {
-        const char* reg = ZydisRegisterGetString(operand->mem.base);
+        const char *reg = ZydisRegisterGetString(operand->mem.base);
         if (!reg) {
           return ZYDIS_STATUS_INVALID_PARAMETER;
         }
@@ -233,7 +233,7 @@ class zydis_architecture : public Architecture {
       }
       if ((operand->mem.index != ZYDIS_REGISTER_NONE) &&
           (operand->mem.type != ZYDIS_MEMOP_TYPE_MIB)) {
-        const char* reg = ZydisRegisterGetString(operand->mem.index);
+        const char *reg = ZydisRegisterGetString(operand->mem.index);
         if (!reg) {
           return ZYDIS_STATUS_INVALID_PARAMETER;
         }
@@ -258,55 +258,55 @@ class zydis_architecture : public Architecture {
     return ZYDIS_STATUS_SUCCESS;
   }
 
-  static ZydisStatus format_operand_ptr(const ZydisFormatter* f, char** buffer,
+  static ZydisStatus format_operand_ptr(const ZydisFormatter *f, char **buffer,
                                         ZydisUSize buffer_len,
-                                        const ZydisDecodedInstruction* insn,
-                                        const ZydisDecodedOperand* operand,
-                                        void* user_data) {
+                                        const ZydisDecodedInstruction *insn,
+                                        const ZydisDecodedOperand *operand,
+                                        void *user_data) {
     TRANSLATE(format_operand_ptr, TextToken, f, buffer, buffer_len, insn,
               operand, user_data);
   }
 
-  static ZydisStatus format_operand_imm(const ZydisFormatter* f, char** buffer,
+  static ZydisStatus format_operand_imm(const ZydisFormatter *f, char **buffer,
                                         ZydisUSize buffer_len,
-                                        const ZydisDecodedInstruction* insn,
-                                        const ZydisDecodedOperand* operand,
-                                        void* user_data) {
-    hook_data* data = static_cast<hook_data*>(user_data);
+                                        const ZydisDecodedInstruction *insn,
+                                        const ZydisDecodedOperand *operand,
+                                        void *user_data) {
+    hook_data *data = static_cast<hook_data *>(user_data);
     CHECK_RESULT2(data->arch._orig_format_operand_imm(
         f, buffer, buffer_len, insn, operand, user_data));
 
     return ZYDIS_STATUS_SUCCESS;
   }
 
-  static ZydisStatus print_operand_size(const ZydisFormatter* f, char** buffer,
+  static ZydisStatus print_operand_size(const ZydisFormatter *f, char **buffer,
                                         ZydisUSize buffer_len,
-                                        const ZydisDecodedInstruction* insn,
-                                        const ZydisDecodedOperand* operand,
-                                        void* user_data) {
+                                        const ZydisDecodedInstruction *insn,
+                                        const ZydisDecodedOperand *operand,
+                                        void *user_data) {
     TRANSLATE(print_operand_size, TextToken, f, buffer, buffer_len, insn,
               operand, user_data);
   }
 
-  static ZydisStatus print_segment(const ZydisFormatter* f, char** buffer,
+  static ZydisStatus print_segment(const ZydisFormatter *f, char **buffer,
                                    ZydisUSize buffer_len,
-                                   const ZydisDecodedInstruction* insn,
-                                   const ZydisDecodedOperand* operand,
-                                   void* user_data) {
+                                   const ZydisDecodedInstruction *insn,
+                                   const ZydisDecodedOperand *operand,
+                                   void *user_data) {
     TRANSLATE(print_segment, TextToken, f, buffer, buffer_len, insn, operand,
               user_data);
   }
 
-  static ZydisStatus print_displacement(const ZydisFormatter* f, char** buffer,
+  static ZydisStatus print_displacement(const ZydisFormatter *f, char **buffer,
                                         ZydisUSize buffer_len,
-                                        const ZydisDecodedInstruction* insn,
-                                        const ZydisDecodedOperand* operand,
-                                        void* user_data) {
-    auto* data = static_cast<hook_data*>(user_data);
-    auto* before = *buffer;
+                                        const ZydisDecodedInstruction *insn,
+                                        const ZydisDecodedOperand *operand,
+                                        void *user_data) {
+    auto *data = static_cast<hook_data *>(user_data);
+    auto *before = *buffer;
     CHECK_RESULT2(data->arch._orig_print_displacement(
         f, buffer, buffer_len, insn, operand, user_data));
-    auto* after = *buffer;
+    auto *after = *buffer;
 
     auto start = 0;
     if (before[0] == '+') {
@@ -319,29 +319,29 @@ class zydis_architecture : public Architecture {
     return ZYDIS_STATUS_SUCCESS;
   }
 
-  static ZydisStatus print_immediate(const ZydisFormatter* f, char** buffer,
+  static ZydisStatus print_immediate(const ZydisFormatter *f, char **buffer,
                                      ZydisUSize buffer_len,
-                                     const ZydisDecodedInstruction* insn,
-                                     const ZydisDecodedOperand* operand,
-                                     void* user_data) {
+                                     const ZydisDecodedInstruction *insn,
+                                     const ZydisDecodedOperand *operand,
+                                     void *user_data) {
     TRANSLATE_VALUE(print_immediate, IntegerToken, operand->imm.value.u, f,
                     buffer, buffer_len, insn, operand, user_data);
   }
 
-  static ZydisStatus print_address(const ZydisFormatter* f, char** buffer,
+  static ZydisStatus print_address(const ZydisFormatter *f, char **buffer,
                                    ZydisUSize buffer_len,
-                                   const ZydisDecodedInstruction* insn,
-                                   const ZydisDecodedOperand* operand,
-                                   ZydisU64 address, void* user_data) {
+                                   const ZydisDecodedInstruction *insn,
+                                   const ZydisDecodedOperand *operand,
+                                   ZydisU64 address, void *user_data) {
     TRANSLATE_VALUE(print_address, PossibleAddressToken, address, f, buffer,
                     buffer_len, insn, operand, address, user_data);
   }
 
-  static ZydisStatus print_decorator(const ZydisFormatter* f, char** buffer,
+  static ZydisStatus print_decorator(const ZydisFormatter *f, char **buffer,
                                      ZydisUSize buffer_len,
-                                     const ZydisDecodedInstruction* insn,
-                                     const ZydisDecodedOperand* operand,
-                                     ZydisDecoratorType type, void* user_data) {
+                                     const ZydisDecodedInstruction *insn,
+                                     const ZydisDecodedOperand *operand,
+                                     ZydisDecoratorType type, void *user_data) {
     TRANSLATE_STRING(print_decorator, f, buffer, buffer_len, insn, operand,
                      type, user_data);
 
@@ -365,11 +365,11 @@ class zydis_architecture : public Architecture {
     return ZYDIS_STATUS_SUCCESS;
   }
 
-  static ZydisStatus print_operand_seperator(const ZydisFormatter* f,
-                                             char** buffer,
+  static ZydisStatus print_operand_seperator(const ZydisFormatter *f,
+                                             char **buffer,
                                              ZydisUSize buffer_len,
-                                             ZydisU8 index, void* user_data) {
-    auto* d2 = static_cast<hook_data*>(user_data);
+                                             ZydisU8 index, void *user_data) {
+    auto *d2 = static_cast<hook_data *>(user_data);
 
     if (d2->tokens.size() >= 2 &&
         d2->tokens[d2->tokens.size() - 2].type == OperandSeparatorToken &&
@@ -386,10 +386,10 @@ class zydis_architecture : public Architecture {
 #undef TRANSLATE_STRING
 
   bool set_formatter_hooks() {
-    const void* c = nullptr;
+    const void *c = nullptr;
 
 #define SET_HOOK(h, f)                                     \
-  c = (const void*)(&f);                                   \
+  c = (const void *)(&f);                                  \
   CHECK_RESULT(ZydisFormatterSetHook(&_formatter, h, &c)); \
   _orig_##f = (decltype(_orig_##f))(c);
 
@@ -447,8 +447,8 @@ class zydis_architecture : public Architecture {
 
   size_t GetDefaultIntegerSize() const override { return GetAddressSize(); }
 
-  bool GetInstructionInfo(const uint8_t* data, uint64_t addr, size_t max_len,
-                          InstructionInfo& result) override {
+  bool GetInstructionInfo(const uint8_t *data, uint64_t addr, size_t max_len,
+                          InstructionInfo &result) override {
     ZydisDecodedInstruction insn;
     CHECK_RESULT(
         ZydisDecoderDecodeBuffer(&_decoder, data, max_len, addr, &insn));
@@ -462,8 +462,8 @@ class zydis_architecture : public Architecture {
     return true;
   }
 
-  bool GetInstructionText(const uint8_t* data, uint64_t addr, size_t& len,
-                          std::vector<InstructionTextToken>& result) override {
+  bool GetInstructionText(const uint8_t *data, uint64_t addr, size_t &len,
+                          std::vector<InstructionTextToken> &result) override {
     ZydisDecodedInstruction insn;
     hook_data hd{*this, result};
 
@@ -479,19 +479,19 @@ class zydis_architecture : public Architecture {
   BNEndianness GetEndianness() const override { return LittleEndian; }
 };
 
-std::unordered_map<BinaryView*, Architecture*> original_architectures;
+std::unordered_map<BinaryView *, Architecture *> original_architectures;
 
 extern "C" {
 BINARYNINJAPLUGIN bool CorePluginInit() {
-  auto* zydis_arch = new zydis_architecture<4>();
+  auto *zydis_arch = new zydis_architecture<4>();
   Architecture::Register(zydis_arch);
 
-  auto* zydis_x64_arch = new zydis_architecture<8>();
+  auto *zydis_x64_arch = new zydis_architecture<8>();
   Architecture::Register(zydis_x64_arch);
 
   PluginCommand::Register("Zydis x86",
                           "Use zydis for 32 bit ELF, PE and Mach-O files.",
-                          [zydis_arch](BinaryView* view) {
+                          [zydis_arch](BinaryView *view) {
                             BinaryViewType::RegisterArchitecture(
                                 "ELF", 3, LittleEndian, zydis_arch);
                             BinaryViewType::RegisterArchitecture(
@@ -502,7 +502,7 @@ BINARYNINJAPLUGIN bool CorePluginInit() {
 
   auto b = false;
   if (b) {
-    [zydis_arch](BinaryView* view) {
+    [zydis_arch](BinaryView *view) {
       BinaryViewType::RegisterArchitecture("ELF", 3, LittleEndian, zydis_arch);
       BinaryViewType::RegisterArchitecture("PE", 0x14c, LittleEndian,
                                            zydis_arch);
@@ -510,7 +510,7 @@ BINARYNINJAPLUGIN bool CorePluginInit() {
                                            zydis_arch);
     }(nullptr);
 
-    [zydis_x64_arch](BinaryView* view) {
+    [zydis_x64_arch](BinaryView *view) {
       BinaryViewType::RegisterArchitecture("ELF", 0x3E, LittleEndian,
                                            zydis_x64_arch);
       BinaryViewType::RegisterArchitecture("PE", 0x8664, LittleEndian,
@@ -520,7 +520,7 @@ BINARYNINJAPLUGIN bool CorePluginInit() {
 
   PluginCommand::Register("Zydis x64",
                           "Use zydis for 64 bit ELF, and PE files.",
-                          [zydis_x64_arch](BinaryView* view) {
+                          [zydis_x64_arch](BinaryView *view) {
                             BinaryViewType::RegisterArchitecture(
                                 "ELF", 0x3E, LittleEndian, zydis_x64_arch);
                             BinaryViewType::RegisterArchitecture(

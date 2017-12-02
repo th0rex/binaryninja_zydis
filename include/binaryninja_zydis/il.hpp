@@ -48,7 +48,9 @@ struct match_case {
 };
 
 template <typename E, typename F>
-match_case(E, F) -> match_case<E, F>;
+match_case<E, F> make_match_case(E&& e, F&& f) {
+  return match_case<E, F>{std::forward<E>(e), std::forward<F>(f)};
+}
 
 template <typename... Cases>
 auto match(Cases&&... cases) {
