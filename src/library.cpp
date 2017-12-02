@@ -47,7 +47,8 @@ static bool is_branch(const ZydisDecodedInstruction& insn) {
     ZYDIS_CATEGORY_UNCOND_BR;
 }
 
-static void add_branch(BNBranchType type, BNBranchType fall_back, const ZydisDecodedInstruction& insn,
+static void add_branch(BNBranchType type, BNBranchType fall_back,
+                       const ZydisDecodedInstruction& insn,
                        InstructionInfo& result) {
   const auto& op = insn.operands[0];
 
@@ -59,7 +60,8 @@ static void add_branch(BNBranchType type, BNBranchType fall_back, const ZydisDec
   }
   else if (op.type == ZYDIS_OPERAND_TYPE_REGISTER) {
     result.AddBranch(fall_back);
-  } else {
+  }
+  else {
     assert(0);
   }
 }
@@ -94,8 +96,10 @@ static void add_cond_branch(const ZydisDecodedInstruction& insn,
   case ZYDIS_MNEMONIC_JNS:
   case ZYDIS_MNEMONIC_JNZ:
   case ZYDIS_MNEMONIC_LOOPNE:
-    add_branch(BNBranchType::TrueBranch, BNBranchType::IndirectBranch, insn, result);
-    result.AddBranch(BNBranchType::FalseBranch, insn.instrAddress + insn.length);
+    add_branch(BNBranchType::TrueBranch, BNBranchType::IndirectBranch, insn,
+               result);
+    result.AddBranch(BNBranchType::FalseBranch,
+                     insn.instrAddress + insn.length);
     break;
   default:
     assert(0);
@@ -108,7 +112,8 @@ static void add_branches(const ZydisDecodedInstruction& insn,
   if (c == ZYDIS_CATEGORY_CALL) {
     assert(insn.operandCount > 0);
 
-    add_branch(BNBranchType::CallDestination, BNBranchType::CallDestination, insn, result);
+    add_branch(BNBranchType::CallDestination, BNBranchType::CallDestination,
+               insn, result);
   }
   else if (c == ZYDIS_CATEGORY_COND_BR) {
     assert(insn.operandCount > 0);
@@ -124,7 +129,8 @@ static void add_branches(const ZydisDecodedInstruction& insn,
   else if (c == ZYDIS_CATEGORY_UNCOND_BR) {
     assert(insn.operandCount > 0);
 
-    add_branch(BNBranchType::UnconditionalBranch, BNBranchType::IndirectBranch, insn, result);
+    add_branch(BNBranchType::UnconditionalBranch, BNBranchType::IndirectBranch,
+               insn, result);
   }
   else {
     assert(false &&
@@ -168,15 +174,17 @@ class zydis_architecture : public Architecture {
     std::vector<InstructionTextToken>& tokens;
   };
 
-#define TRANSLATE_VALUE(n, t, v, ...) \
+#define TRANSLATE_STRING(n, ...) \
   auto* data = static_cast<hook_data*>(user_data); \
-  auto* before = *buffer;\
+  auto* before = *buffer; \
   CHECK_RESULT2(data->arch._orig_ ## n (__VA_ARGS__)); \
   auto* end = *buffer; \
+  std::string str{before, end};
+
+#define TRANSLATE_VALUE(n, t, v, ...) \
+  TRANSLATE_STRING(n, __VA_ARGS__); \
   data->tokens.push_back(InstructionTextToken{ \
-    (t), std::string { \
-      before, end \
-    }, v \
+    (t), str, v \
   }); \
   return ZYDIS_STATUS_SUCCESS;
 
@@ -274,7 +282,8 @@ class zydis_architecture : public Architecture {
           });
         }
       }
-      CHECK_RESULT2(print_displacement(f, buffer, buf_end - *buffer, insn, operand, user_data));
+      CHECK_RESULT2(print_displacement(f, buffer, buf_end - *buffer, insn,
+        operand, user_data));
     }
 
     data->tokens.push_back(InstructionTextToken{
@@ -290,7 +299,8 @@ class zydis_architecture : public Architecture {
                                         const ZydisDecodedInstruction* insn,
                                         const ZydisDecodedOperand* operand,
                                         void* user_data) {
-    TRANSLATE(format_operand_ptr, TextToken, f, buffer, buffer_len, insn, operand, user_data);
+    TRANSLATE(format_operand_ptr, TextToken, f, buffer, buffer_len, insn,
+      operand, user_data);
   }
 
   static ZydisStatus format_operand_imm(const ZydisFormatter* f,
@@ -366,11 +376,35 @@ class zydis_architecture : public Architecture {
                                      const ZydisDecodedOperand* operand,
                                      ZydisDecoratorType type,
                                      void* user_data) {
-    // TODO: Highlight stuff in "{}" so we can click on them
-    TRANSLATE(print_decorator, TextToken, f, buffer, buffer_len, insn, operand, type, user_data);
+    TRANSLATE_STRING(print_decorator, f, buffer, buffer_len, insn, operand, type
+      , user_data);
+
+    size_t pos = 0;
+    for (pos = str.find(" {", pos); pos != std::string::npos; pos = str.
+         find(" {", pos)) {
+      data->tokens.push_back(InstructionTextToken{
+        TextToken, " {"
+      });
+
+      const auto end_pos = str.find("}", pos);
+      assert(end_pos != std::string::npos);
+      assert(pos + 2 != end_pos);
+
+      data->tokens.push_back(InstructionTextToken{
+        RegisterToken, std::string{
+          str.begin() + pos + 2, str.begin() + end_pos
+        }
+      });
+      data->tokens.push_back(InstructionTextToken{
+        TextToken, "}"
+      });
+
+      pos = end_pos;
+    }
+
+    return ZYDIS_STATUS_SUCCESS;
   }
 
-  // BUG: This might get reset in the actual buffer, but we have no way to tell.
   static ZydisStatus print_operand_seperator(const ZydisFormatter* f,
                                              char** buffer,
                                              ZydisUSize buffer_len,
@@ -378,7 +412,8 @@ class zydis_architecture : public Architecture {
                                              void* user_data) {
     auto* d2 = (hook_data*)user_data;
 
-    if(d2->tokens.size() >= 2 && d2->tokens[d2->tokens.size() - 2].type == OperandSeparatorToken) {
+    if (d2->tokens.size() >= 2 && d2->tokens[d2->tokens.size() - 2].type ==
+      OperandSeparatorToken) {
       return ZYDIS_STATUS_SUCCESS;
     }
 
@@ -388,6 +423,7 @@ class zydis_architecture : public Architecture {
 
 #undef TRANSLATE
 #undef TRANSLATE_VALUE
+#undef TRANSLATE_STRING
 
   bool set_formatter_hooks() {
     const void* c = nullptr;
@@ -444,7 +480,8 @@ public:
     }
 
     if (ZydisFormatterSetProperty(&_formatter,
-                                  ZYDIS_FORMATTER_PROP_FORCE_OPERANDSIZE, 1) != ZYDIS_STATUS_SUCCESS) {
+                                  ZYDIS_FORMATTER_PROP_FORCE_OPERANDSIZE, 1) !=
+      ZYDIS_STATUS_SUCCESS) {
       throw std::runtime_error("Could not force operand size");
     }
   }
