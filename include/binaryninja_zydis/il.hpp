@@ -93,9 +93,7 @@ struct _function : expression<_function<F>> {
 
   _function(F&& f) : _f{std::forward<F>(f)} {}
 
-  auto get_lambda() {
-    return [f = _f](auto i) { return f(i); };
-  }
+  auto get_lambda() { return _f; }
 
   using expression<_function<F>>::operator=;
 };
@@ -245,8 +243,53 @@ void test() {
 namespace zydis_matchers {
 using pattern_match::function;
 
+inline auto machine_mode = function(
+    [](const ZydisDecodedInstruction& insn) { return insn.machineMode; });
+
 inline auto mnemonic =
     function([](const ZydisDecodedInstruction& insn) { return insn.mnemonic; });
+
+inline auto length =
+    function([](const ZydisDecodedInstruction& insn) { return insn.length; });
+
+inline auto data =
+    function([](const ZydisDecodedInstruction& insn)
+                 -> const ZydisU8 (&)[ZYDIS_MAX_INSTRUCTION_LENGTH] {
+      return insn.data;
+    });
+
+inline auto encoding =
+    function([](const ZydisDecodedInstruction& insn) { return insn.encoding; });
+
+inline auto opcode_map = function(
+    [](const ZydisDecodedInstruction& insn) { return insn.opcodeMap; });
+
+inline auto opcode =
+    function([](const ZydisDecodedInstruction& insn) { return insn.opcode; });
+
+inline auto stack_width = function(
+    [](const ZydisDecodedInstruction& insn) { return insn.stackWidth; });
+
+inline auto operand_width = function(
+    [](const ZydisDecodedInstruction& insn) { return insn.operandWidth; });
+
+inline auto address_width = function(
+    [](const ZydisDecodedInstruction& insn) { return insn.addressWidth; });
+
+inline auto operand_count = function(
+    [](const ZydisDecodedInstruction& insn) { return insn.operandCount; });
+
+inline auto operands =
+    function([](const ZydisDecodedInstruction& insn)
+                 -> const ZydisDecodedOperand (&)[ZYDIS_MAX_OPERAND_COUNT] {
+      return insn.operands;
+    });
+
+inline auto attributes = function(
+    [](const ZydisDecodedInstruction& insn) { return insn.attributes; });
+
+inline auto instr_address = function(
+    [](const ZydisDecodedInstruction& insn) { return insn.instrAddress; });
 }  // namespace zydis_matchers
 
 void zydis_test() {
