@@ -481,8 +481,6 @@ class zydis_architecture : public Architecture {
   BNEndianness GetEndianness() const override { return LittleEndian; }
 };
 
-std::unordered_map<BinaryView *, Architecture *> original_architectures;
-
 extern "C" {
 BINARYNINJAPLUGIN bool CorePluginInit() {
   auto *zydis_arch = new zydis_architecture<4>();
