@@ -7,7 +7,6 @@
 #include "Zydis/Zydis.h"
 #include "binaryninjaapi.h"
 
-
 using namespace BinaryNinja;
 
 #define CHECK_RESULT(r)                \
