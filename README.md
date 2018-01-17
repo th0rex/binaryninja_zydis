@@ -48,8 +48,4 @@ cmake.exe .. -DCMAKE_BUILD_TYPE=RelWithDebInfo
 Either copy the resulting `binaryninja_zydis.dll` or `libbinaryninja_zydis.so` file to your binary ninja plugins directory, or
 symlink it there so that you don't have to copy it on updates.
 
-After doing that you have to open any binary (or create a new one) and choose `Zydis x86` or `Zydis x64` from the 
-`Tools` menu to use the zydis backend for x86 or x64 files, respectively. Note that in the current view the backend will NOT change,
-this only affects newly opened files.
-
-Once this backend gets better, it will be set as the default.
+After doing this backend will disassemble all x86 and x86_64 binaries. For IL lifting we fall back to binary ninjas implementation.
