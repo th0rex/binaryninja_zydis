@@ -15,6 +15,16 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 add_subdirectory(third_party)
 
+# Utils library
+add_library(binaryninja_zydis_utils INTERFACE)
+target_include_directories(binaryninja_zydis_utils INTERFACE include/utils)
+
+# x86_sema
+set(SOURCE_FILES src/x86_sema/main.cpp)
+add_executable(x86_sema ${SOURCE_FILES})
+target_link_libraries(x86_sema binaryninja_zydis_utils gsl)
+
+# binaryninja_zydis Plugin
 set(SOURCE_FILES src/library.cpp)
 add_library(binaryninja_zydis SHARED ${SOURCE_FILES})
 target_link_libraries(binaryninja_zydis binaryninjaapi Zydis)
