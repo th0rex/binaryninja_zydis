@@ -7,8 +7,7 @@ For example, Binary Ninja can't disassemble `vcmpps k2 {k7}, zmm2, dword ptr ds:
 from that or similar extensions are not supported by binary ninja.
 
 ## Current Limitations
-Currently there is no lifting to IL, but this is in progress. That means, that no function will be named `sub_xxxx` for example,
-but also that both IL views are not available and plugins that rely on IL won't work.
+Currently we fall back to binary ninjas IL lifting (which isn't a bad thing).
 
 ### Mach-O 64 bit binaries
 Mach-O 64 bit binaries are currently not supported, since I couldn't find the correct value to override.
