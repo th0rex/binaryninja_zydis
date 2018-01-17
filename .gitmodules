@@ -6,3 +6,6 @@
 	path = third_party/zydis
 	url = git@github.com:th0rex/zydis-1.git
 	branch = develop
+[submodule "third_party/gsl-lite"]
+	path = third_party/gsl-lite
+	url = git@github.com:martinmoene/gsl-lite.git
