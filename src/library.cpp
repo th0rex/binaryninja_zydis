@@ -1,8 +1,5 @@
-#define _CRT_SECURE_NO_WARNINGS
-
-#include <inttypes.h>
-
 #include <array>
+#include <cinttypes>
 
 #include "Zydis/Zydis.h"
 #include "binaryninjaapi.h"
@@ -29,6 +26,7 @@ struct address_traits;
 template <>
 struct address_traits<4> {
   constexpr static const char* arch_name = "Zydis x86";
+  constexpr static const char* bn_arch_name = "x86";
   constexpr static ZydisAddressWidth address_width = ZYDIS_ADDRESS_WIDTH_32;
   constexpr static ZydisMachineMode machine_mode = ZYDIS_MACHINE_MODE_LEGACY_32;
 };
@@ -36,6 +34,7 @@ struct address_traits<4> {
 template <>
 struct address_traits<8> {
   constexpr static const char* arch_name = "Zydis x64";
+  constexpr static const char* bn_arch_name = "x64";
   constexpr static ZydisAddressWidth address_width = ZYDIS_ADDRESS_WIDTH_64;
   constexpr static ZydisMachineMode machine_mode = ZYDIS_MACHINE_MODE_LONG_64;
 };
@@ -155,6 +154,8 @@ class zydis_architecture : public Architecture {
 
   std::array<char, 512> _buffer;
 
+  Architecture* _arch;
+
   struct hook_data {
     hook_data(zydis_architecture<address_size>& arch,
               std::vector<InstructionTextToken>& instruction_text_tokens)
@@ -208,7 +209,7 @@ class zydis_architecture : public Architecture {
                                         const ZydisDecodedInstruction* insn,
                                         const ZydisDecodedOperand* operand,
                                         void* user_data) {
-    hook_data* data = static_cast<hook_data*>(user_data);
+    auto* data = static_cast<hook_data*>(user_data);
 
     data->tokens.push_back(InstructionTextToken{BeginMemoryOperandToken, "["});
 
@@ -225,7 +226,7 @@ class zydis_architecture : public Architecture {
     } else {
       if (operand->mem.base != ZYDIS_REGISTER_NONE) {
         const char* reg = ZydisRegisterGetString(operand->mem.base);
-        if (!reg) {
+        if (reg == nullptr) {
           return ZYDIS_STATUS_INVALID_PARAMETER;
         }
 
@@ -234,14 +235,14 @@ class zydis_architecture : public Architecture {
       if ((operand->mem.index != ZYDIS_REGISTER_NONE) &&
           (operand->mem.type != ZYDIS_MEMOP_TYPE_MIB)) {
         const char* reg = ZydisRegisterGetString(operand->mem.index);
-        if (!reg) {
+        if (reg == nullptr) {
           return ZYDIS_STATUS_INVALID_PARAMETER;
         }
         if (operand->mem.base != ZYDIS_REGISTER_NONE) {
           data->tokens.push_back(InstructionTextToken{TextToken, " + "});
         }
         data->tokens.push_back(InstructionTextToken{RegisterToken, reg});
-        if (operand->mem.scale) {
+        if (operand->mem.scale != 0) {
           char b[32] = {'\0'};
           snprintf(b, 32, "%d", operand->mem.scale);
           data->tokens.push_back(InstructionTextToken{TextToken, " * "});
@@ -272,7 +273,7 @@ class zydis_architecture : public Architecture {
                                         const ZydisDecodedInstruction* insn,
                                         const ZydisDecodedOperand* operand,
                                         void* user_data) {
-    hook_data* data = static_cast<hook_data*>(user_data);
+    auto* data = static_cast<hook_data*>(user_data);
     CHECK_RESULT2(data->arch._orig_format_operand_imm(
         f, buffer, buffer_len, insn, operand, user_data));
 
@@ -350,7 +351,7 @@ class zydis_architecture : public Architecture {
          pos = str.find(" {", pos)) {
       data->tokens.push_back(InstructionTextToken{TextToken, " {"});
 
-      const auto end_pos = str.find("}", pos);
+      const auto end_pos = str.find('}', pos);
       assert(end_pos != std::string::npos);
       assert(pos + 2 != end_pos);
 
@@ -414,7 +415,13 @@ class zydis_architecture : public Architecture {
   }
 
  public:
-  zydis_architecture() : Architecture(address_traits::arch_name) {
+  zydis_architecture()
+      : Architecture(address_traits::arch_name),
+        _arch{new CoreArchitecture(
+            BNGetArchitectureByName(address_traits::bn_arch_name))},
+        _decoder{},
+        _formatter{},
+        _buffer{} {
     if (ZydisDecoderInit(&_decoder, address_traits::machine_mode,
                          address_traits::address_width) !=
         ZYDIS_STATUS_SUCCESS) {
@@ -449,7 +456,7 @@ class zydis_architecture : public Architecture {
 
   bool GetInstructionInfo(const uint8_t* data, uint64_t addr, size_t max_len,
                           InstructionInfo& result) override {
-    ZydisDecodedInstruction insn;
+    ZydisDecodedInstruction insn{};
     CHECK_RESULT(
         ZydisDecoderDecodeBuffer(&_decoder, data, max_len, addr, &insn));
 
@@ -464,7 +471,7 @@ class zydis_architecture : public Architecture {
 
   bool GetInstructionText(const uint8_t* data, uint64_t addr, size_t& len,
                           std::vector<InstructionTextToken>& result) override {
-    ZydisDecodedInstruction insn;
+    ZydisDecodedInstruction insn{};
     hook_data hd{*this, result};
 
     CHECK_RESULT(ZydisDecoderDecodeBuffer(&_decoder, data, len, addr, &insn));
@@ -487,43 +494,14 @@ BINARYNINJAPLUGIN bool CorePluginInit() {
   auto* zydis_x64_arch = new zydis_architecture<8>();
   Architecture::Register(zydis_x64_arch);
 
-  PluginCommand::Register("Zydis x86",
-                          "Use zydis for 32 bit ELF, PE and Mach-O files.",
-                          [zydis_arch](BinaryView* view) {
-                            BinaryViewType::RegisterArchitecture(
-                                "ELF", 3, LittleEndian, zydis_arch);
-                            BinaryViewType::RegisterArchitecture(
-                                "PE", 0x14c, LittleEndian, zydis_arch);
-                            BinaryViewType::RegisterArchitecture(
-                                "Mach-O", 0x7, LittleEndian, zydis_arch);
-                          });
+  BinaryViewType::RegisterArchitecture("ELF", 3, LittleEndian, zydis_arch);
+  BinaryViewType::RegisterArchitecture("PE", 0x14c, LittleEndian, zydis_arch);
+  BinaryViewType::RegisterArchitecture("Mach-O", 0x7, LittleEndian, zydis_arch);
 
-  auto b = false;
-  if (b) {
-    [zydis_arch](BinaryView* view) {
-      BinaryViewType::RegisterArchitecture("ELF", 3, LittleEndian, zydis_arch);
-      BinaryViewType::RegisterArchitecture("PE", 0x14c, LittleEndian,
-                                           zydis_arch);
-      BinaryViewType::RegisterArchitecture("Mach-O", 0x7, LittleEndian,
-                                           zydis_arch);
-    }(nullptr);
-
-    [zydis_x64_arch](BinaryView* view) {
-      BinaryViewType::RegisterArchitecture("ELF", 0x3E, LittleEndian,
-                                           zydis_x64_arch);
-      BinaryViewType::RegisterArchitecture("PE", 0x8664, LittleEndian,
-                                           zydis_x64_arch);
-    }(nullptr);
-  }
-
-  PluginCommand::Register("Zydis x64",
-                          "Use zydis for 64 bit ELF, and PE files.",
-                          [zydis_x64_arch](BinaryView* view) {
-                            BinaryViewType::RegisterArchitecture(
-                                "ELF", 0x3E, LittleEndian, zydis_x64_arch);
-                            BinaryViewType::RegisterArchitecture(
-                                "PE", 0x8664, LittleEndian, zydis_x64_arch);
-                          });
+  BinaryViewType::RegisterArchitecture("ELF", 0x3E, LittleEndian,
+                                       zydis_x64_arch);
+  BinaryViewType::RegisterArchitecture("PE", 0x8664, LittleEndian,
+                                       zydis_x64_arch);
 
   // PE: 0x8664
   // ELF: 0x3E
