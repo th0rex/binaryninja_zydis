@@ -34,7 +34,7 @@ struct address_traits<4> {
 template <>
 struct address_traits<8> {
   constexpr static const char* arch_name = "Zydis x64";
-  constexpr static const char* bn_arch_name = "x64";
+  constexpr static const char* bn_arch_name = "x86_64";
   constexpr static ZydisAddressWidth address_width = ZYDIS_ADDRESS_WIDTH_64;
   constexpr static ZydisMachineMode machine_mode = ZYDIS_MACHINE_MODE_LONG_64;
 };
@@ -484,6 +484,11 @@ class zydis_architecture : public Architecture {
   }
 
   BNEndianness GetEndianness() const override { return LittleEndian; }
+
+  bool GetInstructionLowLevelIL(const uint8_t* data, uint64_t addr, size_t& len,
+                                LowLevelILFunction& il) override {
+    return _arch->GetInstructionLowLevelIL(data, addr, len, il);
+  }
 };
 
 extern "C" {
