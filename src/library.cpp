@@ -490,6 +490,15 @@ class zydis_architecture : public Architecture {
     return _arch->GetInstructionLowLevelIL(data, addr, len, il);
   }
 
+  size_t GetFlagWriteLowLevelIL(BNLowLevelILOperation op, size_t size,
+                                uint32_t flag_write_type, uint32_t flag,
+                                BNRegisterOrConstant* operands,
+                                size_t operand_count,
+                                LowLevelILFunction& il) override {
+    return _arch->GetFlagWriteLowLevelIL(op, size, flag_write_type, flag,
+                                         operands, operand_count, il);
+  }
+
   std::string GetRegisterName(uint32_t reg) override {
     return _arch->GetRegisterName(reg);
   }
@@ -591,6 +600,10 @@ class zydis_architecture : public Architecture {
 };
 
 extern "C" {
+BINARYNINJAPLUGIN void CorePluginDependencies() {
+  SetCurrentPluginLoadOrder(LatePluginLoadOrder);
+}
+
 BINARYNINJAPLUGIN bool CorePluginInit() {
   auto* zydis_arch = new zydis_architecture<4>();
   Architecture::Register(zydis_arch);
