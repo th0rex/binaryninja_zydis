@@ -100,6 +100,8 @@ struct lexer {
 
   struct unexpected_token {};
 
+  lexer(std::string_view in) : input{in}, current{0} {}
+
   static bool is_digit(char c) {
     return std::isxdigit(c) || c == '.' || c == 'b' || c == 'B' || c == 'x' ||
            c == 'X';
@@ -112,9 +114,7 @@ struct lexer {
   }
 
   static bool is_keyword(std::string_view const& v) {
-    return std::find_if(KEYWORDS.begin(), KEYWORDS.end(), [&v](const char* x) {
-             return x == v;
-           }) != KEYWORDS.end();
+    return std::find(KEYWORDS.begin(), KEYWORDS.end(), v) != KEYWORDS.end();
   }
 
   static bool is_whitespace(char c) {
@@ -171,7 +171,7 @@ struct lexer {
       }
     }
 
-    return {{current - 1, current}, std::move(fallback)};
+    return {{current - 1, current}, fallback};
   }
 
   template <typename F>
@@ -188,27 +188,26 @@ struct lexer {
 
   std::pair<span, token> lex_next() {
   // Span for current character,
-#define CSPAN \
-  { current - 1, current }
+#define CSPAN {current - 1, current}
 
-    static std::pair<char, token> xor_tokens[] = {{'=', {token_xor_eq{}}}};
-    static std::pair<char, token> or_tokens[] = {{'=', {token_or_eq{}}},
-                                                 {'|', {token_or_or{}}}};
-    static std::pair<char, token> and_tokens[] = {{'=', {token_and_eq{}}},
-                                                  {'&', {token_and_and{}}}};
-    static std::pair<char, token> mod_tokens[] = {{'=', {token_percent_eq{}}}};
-    static std::pair<char, token> plus_tokens[] = {{'=', {token_plus_eq{}}},
-                                                   {'+', {token_plus_plus{}}}};
-    static std::pair<char, token> minus_tokens[] = {
-        {'=', {token_minus_eq{}}}, {'-', {token_minus_minus{}}}};
-    static std::pair<char, token> times_tokens[] = {{'=', {token_times_eq{}}}};
-    static std::pair<char, token> div_tokens[] = {{'=', {token_div_eq{}}}};
-    static std::pair<char, token> lt_tokens[] = {{'=', {token_lt_eq{}}},
-                                                 {'<', {token_lt_lt{}}}};
-    static std::pair<char, token> gt_tokens[] = {{'=', {token_gt_eq{}}},
-                                                 {'>', {token_gt_gt{}}}};
-    static std::pair<char, token> eq_tokens[] = {{'=', {token_eq_eq{}}}};
-    static std::pair<char, token> not_tokens[] = {{'=', {token_not_eq{}}}};
+    std::pair<char, token> xor_tokens[] = {{'=', {token_xor_eq{}}}};
+    std::pair<char, token> or_tokens[] = {{'=', {token_or_eq{}}},
+                                          {'|', {token_or_or{}}}};
+    std::pair<char, token> and_tokens[] = {{'=', {token_and_eq{}}},
+                                           {'&', {token_and_and{}}}};
+    std::pair<char, token> mod_tokens[] = {{'=', {token_percent_eq{}}}};
+    std::pair<char, token> plus_tokens[] = {{'=', {token_plus_eq{}}},
+                                            {'+', {token_plus_plus{}}}};
+    std::pair<char, token> minus_tokens[] = {{'=', {token_minus_eq{}}},
+                                             {'-', {token_minus_minus{}}}};
+    std::pair<char, token> times_tokens[] = {{'=', {token_times_eq{}}}};
+    std::pair<char, token> div_tokens[] = {{'=', {token_div_eq{}}}};
+    std::pair<char, token> lt_tokens[] = {{'=', {token_lt_eq{}}},
+                                          {'<', {token_lt_lt{}}}};
+    std::pair<char, token> gt_tokens[] = {{'=', {token_gt_eq{}}},
+                                          {'>', {token_gt_gt{}}}};
+    std::pair<char, token> eq_tokens[] = {{'=', {token_eq_eq{}}}};
+    std::pair<char, token> not_tokens[] = {{'=', {token_not_eq{}}}};
 
     const auto c = get_current();
     switch (c) {
