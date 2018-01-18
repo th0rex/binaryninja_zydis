@@ -489,6 +489,105 @@ class zydis_architecture : public Architecture {
                                 LowLevelILFunction& il) override {
     return _arch->GetInstructionLowLevelIL(data, addr, len, il);
   }
+
+  std::string GetRegisterName(uint32_t reg) override {
+    return _arch->GetRegisterName(reg);
+  }
+
+  std::string GetFlagName(uint32_t flag) override {
+    return _arch->GetFlagName(flag);
+  }
+
+  std::vector<uint32_t> GetAllFlags() override { return _arch->GetAllFlags(); }
+
+  std::string GetFlagWriteTypeName(uint32_t flags) override {
+    return _arch->GetFlagWriteTypeName(flags);
+  }
+
+  std::vector<uint32_t> GetAllFlagWriteTypes() override {
+    return _arch->GetAllFlagWriteTypes();
+  }
+
+  BNFlagRole GetFlagRole(uint32_t flag) override {
+    return _arch->GetFlagRole(flag);
+  }
+
+  std::vector<uint32_t> GetFlagsRequiredForFlagCondition(
+      BNLowLevelILFlagCondition cond) override {
+    return _arch->GetFlagsRequiredForFlagCondition(cond);
+  }
+
+  std::vector<uint32_t> GetFlagsWrittenByFlagWriteType(
+      uint32_t write_type) override {
+    return _arch->GetFlagsWrittenByFlagWriteType(write_type);
+  }
+
+  bool IsNeverBranchPatchAvailable(const uint8_t* data, uint64_t addr,
+                                   size_t len) override {
+    return _arch->IsNeverBranchPatchAvailable(data, addr, len);
+  }
+
+  bool IsAlwaysBranchPatchAvailable(const uint8_t* data, uint64_t addr,
+                                    size_t len) override {
+    return _arch->IsAlwaysBranchPatchAvailable(data, addr, len);
+  }
+
+  bool IsInvertBranchPatchAvailable(const uint8_t* data, uint64_t addr,
+                                    size_t len) override {
+    return _arch->IsInvertBranchPatchAvailable(data, addr, len);
+  }
+
+  bool IsSkipAndReturnZeroPatchAvailable(const uint8_t* data, uint64_t addr,
+                                         size_t len) override {
+    return _arch->IsSkipAndReturnZeroPatchAvailable(data, addr, len);
+  }
+
+  bool IsSkipAndReturnValuePatchAvailable(const uint8_t* data, uint64_t addr,
+                                          size_t len) override {
+    return _arch->IsSkipAndReturnValuePatchAvailable(data, addr, len);
+  }
+
+  bool ConvertToNop(uint8_t* data, uint64_t addr, size_t len) override {
+    return _arch->ConvertToNop(data, addr, len);
+  }
+
+  bool AlwaysBranch(uint8_t* data, uint64_t addr, size_t len) override {
+    return _arch->AlwaysBranch(data, addr, len);
+  }
+
+  bool InvertBranch(uint8_t* data, uint64_t addr, size_t len) override {
+    return _arch->InvertBranch(data, addr, len);
+  }
+
+  bool SkipAndReturnValue(uint8_t* data, uint64_t addr, size_t len,
+                          uint64_t value) override {
+    return _arch->SkipAndReturnValue(data, addr, len, value);
+  }
+
+  std::vector<uint32_t> GetFullWidthRegisters() override {
+    return _arch->GetFullWidthRegisters();
+  }
+
+  std::vector<uint32_t> GetGlobalRegisters() override {
+    return _arch->GetGlobalRegisters();
+  }
+
+  std::vector<uint32_t> GetAllRegisters() override {
+    return _arch->GetAllRegisters();
+  }
+
+  BNRegisterInfo GetRegisterInfo(uint32_t reg) override {
+    return _arch->GetRegisterInfo(reg);
+  }
+
+  uint32_t GetStackPointerRegister() override {
+    return _arch->GetStackPointerRegister();
+  }
+
+  bool Assemble(const std::string& code, uint64_t addr, DataBuffer& result,
+                std::string& errors) override {
+    return _arch->Assemble(code, addr, result, errors);
+  }
 };
 
 extern "C" {
