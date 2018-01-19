@@ -390,7 +390,7 @@ class zydis_architecture : public Architecture {
     const void* c = nullptr;
 
 #define SET_HOOK(h, f)                                     \
-  c = (const void*)(&f);                                   \
+  c = (const void*)(&(f));                                 \
   CHECK_RESULT(ZydisFormatterSetHook(&_formatter, h, &c)); \
   _orig_##f = (decltype(_orig_##f))(c);
 
